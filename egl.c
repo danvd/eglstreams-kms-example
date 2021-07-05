@@ -38,6 +38,7 @@
 #define EGL_DRM_MASTER_FD_EXT                   0x333C
 #endif
 
+EGLStreamKHR eglStream;
 
 /*
  * The EGL_EXT_device_base extension (or EGL_EXT_device_enumeration
@@ -253,8 +254,14 @@ EGLSurface SetUpEgl(EGLDisplay eglDpy, uint32_t planeID, int width, int height)
         planeID,
         EGL_NONE,
     };
+#ifndef EGL_CONSUMER_AUTO_ACQUIRE_EXT 
+#define EGL_CONSUMER_AUTO_ACQUIRE_EXT 0x332B 
+#endif
 
-    EGLint streamAttribs[] = { EGL_NONE };
+    EGLint streamAttribs[] = { 
+	    EGL_STREAM_FIFO_LENGTH_KHR, 0,
+	    EGL_CONSUMER_AUTO_ACQUIRE_EXT, EGL_FALSE,
+	    EGL_NONE };
 
     EGLint surfaceAttribs[] = {
         EGL_WIDTH, width,
@@ -267,7 +274,6 @@ EGLSurface SetUpEgl(EGLDisplay eglDpy, uint32_t planeID, int width, int height)
     EGLint n = 0;
     EGLBoolean ret;
     EGLOutputLayerEXT eglLayer;
-    EGLStreamKHR eglStream;
     EGLSurface eglSurface;
 
     const char *extensionString = eglQueryString(eglDpy, EGL_EXTENSIONS);

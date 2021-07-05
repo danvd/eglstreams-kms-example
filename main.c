@@ -19,7 +19,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
+#include <time.h>
+#include <stdio.h>
+#include <unistd.h>
 #include "utils.h"
 #include "egl.h"
 #include "kms.h"
@@ -29,6 +31,8 @@
  * Example code demonstrating how to connect EGL to DRM KMS using
  * EGLStreams.
  */
+
+extern EGLStreamKHR eglStream;
 
 int main(void)
 {
@@ -52,9 +56,26 @@ int main(void)
 
     InitGears(width, height);
 
+    EGLBoolean acquireOk = 1;
     while(1) {
         DrawGears();
-        eglSwapBuffers(eglDpy, eglSurface);
+	if (acquireOk) { // Protection against EGL_RESOURCE_BUSY_EXT leading to a deadlock
+        	eglSwapBuffers(eglDpy, eglSurface);
+	}
+
+	
+	struct timespec cur_time;                                                                                                                                                                                                       
+        clock_gettime(CLOCK_MONOTONIC, &cur_time);
+        long last_ms = cur_time.tv_sec * 1000 + cur_time.tv_nsec / 1000000;
+	EGLAttrib acquire_attribs[] = { EGL_NONE };
+	acquireOk = pEglStreamConsumerAcquireAttribNV(eglDpy, eglStream, acquire_attribs);
+        clock_gettime(CLOCK_MONOTONIC, &cur_time);
+	long cur_ms = cur_time.tv_sec * 1000 + cur_time.tv_nsec / 1000000;
+	long delta = cur_ms - last_ms;
+	printf("eglStreamConsumerAcquireAttribNV exec time: %ld ms\n", delta);
+	if (delta < 16) {
+		usleep((16 - delta) * 1000); // bogus vsync to 60hz
+	}
         PrintFps();
     }
 
