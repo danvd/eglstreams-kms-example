@@ -55,27 +55,15 @@ int main(void)
     eglSurface = SetUpEgl(eglDpy, planeID, width, height);
 
     InitGears(width, height);
-
-    EGLBoolean acquireOk = 1;
+    int swapCounter = 1;
     while(1) {
+	printf("Swap counter, begin: %d\n", swapCounter);
         DrawGears();
-	if (acquireOk) { // Protection against EGL_RESOURCE_BUSY_EXT leading to a deadlock
-        	eglSwapBuffers(eglDpy, eglSurface);
-	}
-
+        eglSwapBuffers(eglDpy, eglSurface); // This call will deadlock eventually
+	printf("Swap counter, end: %d\n", swapCounter++);
 	
-	struct timespec cur_time;                                                                                                                                                                                                       
-        clock_gettime(CLOCK_MONOTONIC, &cur_time);
-        long last_ms = cur_time.tv_sec * 1000 + cur_time.tv_nsec / 1000000;
 	EGLAttrib acquire_attribs[] = { EGL_NONE };
-	acquireOk = pEglStreamConsumerAcquireAttribNV(eglDpy, eglStream, acquire_attribs);
-        clock_gettime(CLOCK_MONOTONIC, &cur_time);
-	long cur_ms = cur_time.tv_sec * 1000 + cur_time.tv_nsec / 1000000;
-	long delta = cur_ms - last_ms;
-	printf("eglStreamConsumerAcquireAttribNV exec time: %ld ms\n", delta);
-	if (delta < 16) {
-		usleep((16 - delta) * 1000); // bogus vsync to 60hz
-	}
+	pEglStreamConsumerAcquireAttribNV(eglDpy, eglStream, acquire_attribs);
         PrintFps();
     }
 
